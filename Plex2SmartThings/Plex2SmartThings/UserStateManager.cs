@@ -1,12 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
-using System.Web;
 using System.Xml.Linq;
-using System.Xml.XPath;
+using System.Net;
 
 namespace Plex2SmartThings
 {
@@ -27,7 +23,7 @@ namespace Plex2SmartThings
             try { 
                 XDocument doc = null;
                 doc = XDocument.Parse(rawXml);
-                XElement e = doc.XPathSelectElement("/MediaContainer");
+                XElement e = doc.Element("MediaContainer");
                 foreach (XElement video in e.Elements())
                 {
                     ParseVideoElement(video);
@@ -126,7 +122,7 @@ namespace Plex2SmartThings
             /// </summary>
             /// <param name="state"></param>
             /// <param name="forced">Overrides the check vs previous state</param>
-            public void OnStateRetrieved(PlayStates state, string mediaType, bool forced=false)
+            public async void OnStateRetrieved(PlayStates state, string mediaType, bool forced=false)
             {
                 if (Program.DebugLevel >= 2) Console.WriteLine(UserName + "@'" + PlayerName + "' " + Type + "=> StateRetrieved(" + state.ToString() + ", " + mediaType + ")");
 
@@ -153,7 +149,7 @@ namespace Plex2SmartThings
                 else
                 {
                     string endpoint = CreateEndpointUrl();
-                    Program.SendGetRequest(endpoint);
+                    await Program.SendGetRequest(endpoint);
 
                     if (CurrentState == PlayStates.STOP) RequestListRemoval = true;
                 }
@@ -168,7 +164,7 @@ namespace Plex2SmartThings
             private Thread stateDelayThread;
             private int Delay;
             public bool AbortThreads = false;
-            private void ProcessStateDelay()
+            private async void ProcessStateDelay()
             {
                 while (!AbortThreads && !Program.Terminate)
                 {
@@ -179,7 +175,7 @@ namespace Plex2SmartThings
                         {
                             string endpoint = CreateEndpointUrl();
                             if (Program.DebugLevel >= 1) Console.WriteLine("Sent delayed state change: " + CurrentState.ToString());
-                            Program.SendGetRequest(endpoint);
+                            await Program.SendGetRequest(endpoint);
 
                             if (CurrentState == PlayStates.STOP) RequestListRemoval = true;
                         }
@@ -200,12 +196,13 @@ namespace Plex2SmartThings
                 //Prepare for first param, just in case there is already added some params in the url in the config file
                 if (!endpoint.Contains("?")) endpoint += "?";
                 else endpoint += "&";
-
+                
                 //Add the GET parameters to the request
-                endpoint += "access_token=" + HttpUtility.UrlEncode(Config.Endpoint_AccessToken);
-                endpoint += "&player=" + HttpUtility.UrlEncode(PlayerName);
-                endpoint += "&user=" + HttpUtility.UrlEncode(UserName);
-                endpoint += "&type=" + HttpUtility.UrlEncode(Type);
+                
+                endpoint += "access_token=" + WebUtility.UrlEncode(Config.Endpoint_AccessToken);
+                endpoint += "&player=" + WebUtility.UrlEncode(PlayerName);
+                endpoint += "&user=" + WebUtility.UrlEncode(UserName);
+                endpoint += "&type=" + WebUtility.UrlEncode(Type);
 
                 return endpoint;
             }

@@ -1,16 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Security.Permissions;
-using System.Text;
 using System.Threading;
+using System.Net.Http;
 using System.Threading.Tasks;
-using System.Web;
-using System.Xml.Linq;
-using System.Xml.XPath;
 
 namespace Plex2SmartThings
 {
@@ -19,7 +11,7 @@ namespace Plex2SmartThings
         public static int DebugLevel = 0;
         private static UserStateManager StateManager;
 
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
             //Set debug level
             if (Debugger.IsAttached) DebugLevel = 1;
@@ -47,10 +39,11 @@ namespace Plex2SmartThings
 
             Thread thread = new Thread(() => CheckPlexState());
             thread.Start();
-
+            
             Console.ReadLine();
             Terminate = true;
-            thread.Abort();
+            
+            // thread.Abort();
 
             Console.ForegroundColor = ConsoleColor.Red;
             string terminationMessage = "\n\nTerminating Process..";
@@ -65,13 +58,14 @@ namespace Plex2SmartThings
 
         private static bool notifiedFirst = false;
         public static bool Terminate = false;
-        private static void CheckPlexState()
+        private static async void CheckPlexState()
         {
             while (!Terminate)
             {
                 if (DebugLevel >= 2) Console.WriteLine("Checking..");
-
-                string raw = SendGetRequest(Config.PlexStatusUrl);
+                
+                var raw = await SendGetRequest(Config.PlexStatusUrl);
+            
                 if (Terminate || raw == null) return;
                 StateManager.ParsePlexResult(raw);
                 if (Terminate) return;
@@ -92,17 +86,21 @@ namespace Plex2SmartThings
             }
         }
 
-        public static string SendGetRequest(string url)
+        public static async Task<string> SendGetRequest(string url)
         {
             try
             {
-                using (WebClient client = new WebClient())
+                
+                using (HttpClient client = new HttpClient())
                 {
                     if (DebugLevel >= 2) Console.WriteLine("SendGetRequest: " + url);
-                    string result = client.DownloadString(url);
-                    if (DebugLevel == 2) Console.WriteLine("Result: " + result);
-                    if (DebugLevel >= 2) Debug.WriteLine(result);
-                    return result;
+                    
+                    using (var result = await client.GetAsync(new Uri(url))){
+                        string strResult = await result.Content.ReadAsStringAsync();
+                        if (DebugLevel == 2) Console.WriteLine("Result: " + strResult);
+                        if (DebugLevel >= 2) Debug.WriteLine(strResult);
+                        return strResult;
+                    }
                 }
             }
             catch (Exception ex)

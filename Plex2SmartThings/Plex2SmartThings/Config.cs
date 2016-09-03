@@ -1,10 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml.Linq;
-using System.Xml.XPath;
 
 namespace Plex2SmartThings
 {
@@ -68,7 +64,8 @@ namespace Plex2SmartThings
         {
             XDocument doc = null;
             doc = XDocument.Load("config.config");
-            XElement eConfig = doc.XPathSelectElement("/config");
+            // XElement eConfig = doc.XPathSelectElement("/config");
+            XElement eConfig = doc.Element("config");
 
             //plexCheck
             XElement ePlexCheck = eConfig.Element("plexCheck");
